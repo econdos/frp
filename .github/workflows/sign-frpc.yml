@@ -1,14 +1,12 @@
-name: Assinar binário frpc.exe com Cosign
+name: Build e Assinar frpc.exe com Cosign
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'frpc.exe'
+    branches: [dev]
 
 jobs:
-  sign-frpc:
-    name: Assinatura com Cosign
+  build-e-sign:
+    name: Build e Assinatura
     runs-on: ubuntu-latest
 
     permissions:
@@ -19,10 +17,20 @@ jobs:
       - name: 📥 Checkout do código
         uses: actions/checkout@v3
 
+      - name: ⚙️ Instalar Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'  # ajuste para a versão que você usa
+
+      - name: 🔨 Build do frpc.exe (para Windows)
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o frpc.exe ./cmd/frpc
+        # ajuste o caminho ./cmd/frpc conforme o local do main.go do frpc
+
       - name: 🔧 Instalar Cosign
         uses: sigstore/cosign-installer@v3
 
-      - name: 🔐 Assinar frpc.exe com Cosign (keyless)
+      - name: 🔐 Assinar frpc.exe com Cosign
         run: |
           cosign sign-blob \
             --yes \
@@ -32,11 +40,12 @@ jobs:
             --new-bundle-format=true \
             frpc.exe
 
-      - name: 📦 Publicar artefatos da assinatura
+      - name: 📦 Publicar artefatos
         uses: actions/upload-artifact@v4
         with:
-          name: assinatura-frpc
+          name: build-assinado-frpc
           path: |
+            frpc.exe
             frpc.sig
             frpc.crt
             frpc.bundle
