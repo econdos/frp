@@ -1,0 +1,43 @@
+name: Assinar binário frpc.exe com Cosign
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frpc.exe'
+
+jobs:
+  sign-frpc:
+    name: Assinatura com Cosign
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # 🔐 necessário para assinatura keyless
+      contents: read
+
+    steps:
+      - name: 📥 Checkout do código
+        uses: actions/checkout@v3
+
+      - name: 🔧 Instalar Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: 🔐 Assinar frpc.exe com Cosign (keyless)
+        run: |
+          cosign sign-blob \
+            --yes \
+            --output-signature frpc.sig \
+            --output-certificate frpc.crt \
+            --bundle frpc.bundle \
+            --new-bundle-format=true \
+            frpc.exe
+
+      - name: 📦 Publicar artefatos da assinatura
+        uses: actions/upload-artifact@v4
+        with:
+          name: assinatura-frpc
+          path: |
+            frpc.sig
+            frpc.crt
+            frpc.bundle
+
