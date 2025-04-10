@@ -1,17 +1,25 @@
-name: Build e Assinar frpc.exe com Cosign
+name: Build e Publicar Release do frpc.exe
 
 on:
-  push:
-    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da release (ex: v1.0.0)"
+        required: true
+      release_name:
+        description: "Nome da release (ex: Release inicial)"
+        required: true
+      release_body:
+        description: "Descrição da release"
+        required: false
 
 jobs:
-  build-e-sign:
-    name: Build e Assinatura
+  build-sign-release:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write  # 🔐 necessário para assinatura keyless
-      contents: read
+      id-token: write         # 🔐 Para Cosign keyless
+      contents: write         # 📝 Para criar releases e subir arquivos
 
     steps:
       - name: 📥 Checkout do código
@@ -20,12 +28,12 @@ jobs:
       - name: ⚙️ Instalar Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'  # ajuste para a versão que você usa
+          go-version: '1.22'  # ajuste conforme necessário
 
-      - name: 🔨 Build do frpc.exe (para Windows)
+      - name: 🔨 Build frpc.exe para Windows
         run: |
           GOOS=windows GOARCH=amd64 go build -o frpc.exe ./cmd/frpc
-        # ajuste o caminho ./cmd/frpc conforme o local do main.go do frpc
+        # ajuste o caminho se necessário
 
       - name: 🔧 Instalar Cosign
         uses: sigstore/cosign-installer@v3
@@ -40,11 +48,13 @@ jobs:
             --new-bundle-format=true \
             frpc.exe
 
-      - name: 📦 Publicar artefatos
-        uses: actions/upload-artifact@v4
+      - name: 📦 Criar e publicar release
+        uses: softprops/action-gh-release@v2
         with:
-          name: build-assinado-frpc
-          path: |
+          tag_name: ${{ github.event.inputs.tag }}
+          name: ${{ github.event.inputs.release_name }}
+          body: ${{ github.event.inputs.release_body }}
+          files: |
             frpc.exe
             frpc.sig
             frpc.crt
